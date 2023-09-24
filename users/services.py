@@ -4,7 +4,6 @@ def get_all_users():
   return Users.objects.all()
 
 def get_user(id):
-  print(11111111, id)
   return Users.objects.get(id=id)
 
 def update_user(id, name):

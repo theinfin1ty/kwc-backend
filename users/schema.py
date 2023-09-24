@@ -1,7 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 from users.models import Users
-import users.services as services
+from users import services
 
 class UserType(DjangoObjectType):
     class Meta:
