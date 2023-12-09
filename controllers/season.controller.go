@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"kwc-backend/configs"
 	"kwc-backend/helpers"
 	"kwc-backend/models"
 	"kwc-backend/validations"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -21,13 +23,16 @@ func CreateSeason(c *gin.Context) {
 	err := c.BindJSON(&body)
 
 	if err != nil {
+		fmt.Println(err)
 		c.JSON(http.StatusBadRequest, helpers.BadRequestResponse("Validation Failed"))
 		return
 	}
 
+	airDate, _ := time.Parse("2006-01-02", body.AirDate)
+
 	season := models.Season{
 		Id:        primitive.NewObjectID(),
-		AirDate:   body.AirDate,
+		AirDate:   airDate,
 		Title:     body.Title,
 		Subtitle:  body.Subtitle,
 		Theme:     body.Theme,

@@ -7,6 +7,7 @@ import (
 	"kwc-backend/models"
 	"kwc-backend/validations"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -47,28 +48,27 @@ func CreateEpisode(c *gin.Context) {
 	}
 
 	var contestantIds []primitive.ObjectID
-	var winnerIds []primitive.ObjectID
 
 	for _, cid := range body.ContestantIds {
 		contestantId, _ := primitive.ObjectIDFromHex(cid)
 		contestantIds = append(contestantIds, contestantId)
 	}
 
-	for _, wid := range body.ContestantIds {
-		winnerId, _ := primitive.ObjectIDFromHex(wid)
-		winnerIds = append(winnerIds, winnerId)
-	}
+	winnerId, _ := primitive.ObjectIDFromHex(body.WinnerId)
+	runnerUpId, _ := primitive.ObjectIDFromHex(body.RunnerUpId)
+	airDate, _ := time.Parse("2006-01-02", body.AirDate)
 
 	episode := models.Episode{
 		Id:            primitive.NewObjectID(),
-		AirDate:       body.AirDate,
+		AirDate:       airDate,
 		Title:         body.Title,
 		Subtitle:      body.Subtitle,
 		Thumbnail:     body.Thumbnail,
 		Url:           body.Url,
 		SeasonId:      seasonId,
 		ContestantIds: contestantIds,
-		WinnerIds:     winnerIds,
+		WinnerId:      winnerId,
+		RunnerUpId:    runnerUpId,
 	}
 
 	_, err = EpisodeCollection.InsertOne(context.TODO(), episode)
@@ -100,6 +100,24 @@ func ListEpisodesBySeason(c *gin.Context) {
 			"localField":   "seasonId",
 			"foreignField": "_id",
 			"as":           "season",
+		}},
+		{"$lookup": bson.M{
+			"from":         "contestants",
+			"localField":   "contestantIds",
+			"foreignField": "_id",
+			"as":           "Contestants",
+		}},
+		{"$lookup": bson.M{
+			"from":         "contestants",
+			"localField":   "winnerId",
+			"foreignField": "_id",
+			"as":           "winner",
+		}},
+		{"$lookup": bson.M{
+			"from":         "contestants",
+			"localField":   "runnerUpId",
+			"foreignField": "_id",
+			"as":           "runnerUp",
 		}},
 	})
 
@@ -186,28 +204,27 @@ func UpdateEpisode(c *gin.Context) {
 	}
 
 	var contestantIds []primitive.ObjectID
-	var winnerIds []primitive.ObjectID
 
 	for _, cid := range body.ContestantIds {
 		contestantId, _ := primitive.ObjectIDFromHex(cid)
 		contestantIds = append(contestantIds, contestantId)
 	}
 
-	for _, wid := range body.ContestantIds {
-		winnerId, _ := primitive.ObjectIDFromHex(wid)
-		winnerIds = append(winnerIds, winnerId)
-	}
+	winnerId, _ := primitive.ObjectIDFromHex(body.WinnerId)
+	runnerUpId, _ := primitive.ObjectIDFromHex(body.RunnerUpId)
+	airDate, _ := time.Parse("2006-01-02", body.AirDate)
 
 	episode := models.Episode{
 		Id:            id,
-		AirDate:       body.AirDate,
+		AirDate:       airDate,
 		Title:         body.Title,
 		Subtitle:      body.Subtitle,
 		Thumbnail:     body.Thumbnail,
 		Url:           body.Url,
 		SeasonId:      seasonId,
 		ContestantIds: contestantIds,
-		WinnerIds:     winnerIds,
+		WinnerId:      winnerId,
+		RunnerUpId:    runnerUpId,
 	}
 
 	_, err = SeasonCollection.UpdateOne(context.TODO(), bson.M{"_d": id}, episode)
