@@ -46,12 +46,29 @@ func CreateEpisode(c *gin.Context) {
 		return
 	}
 
+	var contestantIds []primitive.ObjectID
+	var winnerIds []primitive.ObjectID
+
+	for _, cid := range body.ContestantIds {
+		contestantId, _ := primitive.ObjectIDFromHex(cid)
+		contestantIds = append(contestantIds, contestantId)
+	}
+
+	for _, wid := range body.ContestantIds {
+		winnerId, _ := primitive.ObjectIDFromHex(wid)
+		winnerIds = append(winnerIds, winnerId)
+	}
+
 	episode := models.Episode{
-		Id:          primitive.NewObjectID(),
-		AirDate:     body.AirDate,
-		Description: body.Description,
-		Name:        body.Name,
-		SeasonId:    seasonId,
+		Id:            primitive.NewObjectID(),
+		AirDate:       body.AirDate,
+		Title:         body.Title,
+		Subtitle:      body.Subtitle,
+		Thumbnail:     body.Thumbnail,
+		Url:           body.Url,
+		SeasonId:      seasonId,
+		ContestantIds: contestantIds,
+		WinnerIds:     winnerIds,
 	}
 
 	_, err = EpisodeCollection.InsertOne(context.TODO(), episode)
@@ -133,6 +150,7 @@ func GetEpisode(c *gin.Context) {
 
 func UpdateEpisode(c *gin.Context) {
 	var body validations.EpisodeInput
+	var season models.Season
 
 	err := c.BindJSON(&body)
 
@@ -148,16 +166,57 @@ func UpdateEpisode(c *gin.Context) {
 		return
 	}
 
+	seasonId, err := primitive.ObjectIDFromHex(body.SeasonId)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, helpers.BadRequestResponse("Invalid Season ID"))
+		return
+	}
+
+	err = SeasonCollection.FindOne(context.TODO(), bson.M{"_id": seasonId}).Decode(&season)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, helpers.NotFoundResponse("Season not found"))
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
+		return
+	}
+
+	var contestantIds []primitive.ObjectID
+	var winnerIds []primitive.ObjectID
+
+	for _, cid := range body.ContestantIds {
+		contestantId, _ := primitive.ObjectIDFromHex(cid)
+		contestantIds = append(contestantIds, contestantId)
+	}
+
+	for _, wid := range body.ContestantIds {
+		winnerId, _ := primitive.ObjectIDFromHex(wid)
+		winnerIds = append(winnerIds, winnerId)
+	}
+
 	episode := models.Episode{
-		Id:          id,
-		AirDate:     body.AirDate,
-		Description: body.Description,
-		Name:        body.Name,
+		Id:            id,
+		AirDate:       body.AirDate,
+		Title:         body.Title,
+		Subtitle:      body.Subtitle,
+		Thumbnail:     body.Thumbnail,
+		Url:           body.Url,
+		SeasonId:      seasonId,
+		ContestantIds: contestantIds,
+		WinnerIds:     winnerIds,
 	}
 
 	_, err = SeasonCollection.UpdateOne(context.TODO(), bson.M{"_d": id}, episode)
 
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, helpers.NotFoundResponse("Episode not found"))
+			return
+		}
 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
 		return
 	}
@@ -177,6 +236,10 @@ func DeleteEpisode(c *gin.Context) {
 	_, err = EpisodeCollection.DeleteOne(context.TODO(), bson.M{"_id": id})
 
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, helpers.NotFoundResponse("Episode not found"))
+			return
+		}
 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
 		return
 	}

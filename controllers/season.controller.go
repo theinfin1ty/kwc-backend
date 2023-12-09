@@ -26,9 +26,13 @@ func CreateSeason(c *gin.Context) {
 	}
 
 	season := models.Season{
-		Id:          primitive.NewObjectID(),
-		AirDate:     body.AirDate,
-		Description: body.Description,
+		Id:        primitive.NewObjectID(),
+		AirDate:   body.AirDate,
+		Title:     body.Title,
+		Subtitle:  body.Subtitle,
+		Theme:     body.Theme,
+		Thumbnail: body.Thumbnail,
+		Url:       body.Url,
 	}
 
 	_, err = SeasonCollection.InsertOne(context.TODO(), season)
@@ -109,9 +113,12 @@ func UpdateSeason(c *gin.Context) {
 	}
 
 	season := models.Season{
-		Id:          id,
-		AirDate:     body.AirDate,
-		Description: body.Description,
+		Id:        id,
+		Title:     body.Title,
+		Subtitle:  body.Subtitle,
+		Theme:     body.Theme,
+		Thumbnail: body.Thumbnail,
+		Url:       body.Url,
 	}
 
 	_, err = SeasonCollection.UpdateOne(context.TODO(), models.Season{Id: id}, season)

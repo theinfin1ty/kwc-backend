@@ -7,7 +7,12 @@ import (
 )
 
 type Season struct {
-	Id          primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	AirDate     time.Time          `bson:"airDate" json:"airDate"`
-	Description string             `bson:"description" json:"description"`
+	Id        primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	AirDate   time.Time          `bson:"airDate" json:"airDate"`
+	Title     string             `bson:"title" json:"title"`
+	Subtitle  string             `bson:"subtitle" json:"subtitle"`
+	Theme     string             `bson:"theme" json:"theme"`
+	Thumbnail string             `bson:"thumbnail" json:"thumbnail"`
+	Url       string             `bson:"url" json:"url"`
+	Episodes  []Episode          `json:"episodes"`
 }

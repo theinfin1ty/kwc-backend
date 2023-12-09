@@ -49,7 +49,9 @@ func CreateQuestion(c *gin.Context) {
 	question := models.Question{
 		Id:        primitive.NewObjectID(),
 		Question:  body.Question,
-		Answer:    body.Answer,
+		Answers:   body.Answers,
+		Images:    body.Images,
+		Hints:     body.Hints,
 		EpisodeId: episodeId,
 	}
 
@@ -160,7 +162,9 @@ func UpdateQuestion(c *gin.Context) {
 	}
 
 	question.Question = body.Question
-	question.Answer = body.Answer
+	question.Answers = body.Answers
+	question.Images = body.Images
+	question.Hints = body.Hints
 
 	_, err = QuestionCollection.UpdateOne(context.TODO(), bson.M{"_id": questionId}, question)
 
