@@ -9,6 +9,9 @@ import (
 )
 
 func main() {
+	if configs.GetEnvVariable("ENV") == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	app := gin.Default()
 
 	configs.ConnectDB()

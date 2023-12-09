@@ -31,6 +31,6 @@ func ConnectDB() *mongo.Client {
 var DB = ConnectDB()
 
 func GetCollection(client *mongo.Client, collectionName string) *mongo.Collection {
-	collection := client.Database("kwc-backend").Collection(collectionName)
+	collection := client.Database(GetEnvVariable("DATABASE_NAME")).Collection(collectionName)
 	return collection
 }

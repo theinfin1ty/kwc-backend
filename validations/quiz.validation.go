@@ -13,3 +13,9 @@ type EpisodeInput struct {
 	Description string    `json:"description"`
 	SeasonId    string    `json:"seasonId" binding:"required"`
 }
+
+type QuestionInput struct {
+	EpisodeId string `json:"episodeId" binding:"required"`
+	Question  string `json:"question" binding:"required"`
+	Answer    string `json:"answer"`
+}

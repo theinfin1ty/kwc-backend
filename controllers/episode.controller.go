@@ -65,31 +65,6 @@ func CreateEpisode(c *gin.Context) {
 	return
 }
 
-func ListEpisodes(c *gin.Context) {
-	episodes := []models.Episode{}
-
-	cursor, err := EpisodeCollection.Find(context.TODO(), nil)
-
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			c.JSON(http.StatusNotFound, helpers.NotFoundResponse("Episodes not found"))
-			return
-		}
-		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
-		return
-	}
-
-	err = cursor.All(context.TODO(), &episodes)
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
-		return
-	}
-
-	c.JSON(http.StatusOK, helpers.SuccessResponse(&gin.H{"episodes": episodes}))
-	return
-}
-
 func ListEpisodesBySeason(c *gin.Context) {
 	episodes := []models.Episode{}
 
