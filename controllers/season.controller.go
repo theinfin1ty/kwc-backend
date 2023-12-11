@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -54,7 +55,7 @@ func CreateSeason(c *gin.Context) {
 func ListSeasons(c *gin.Context) {
 	seasons := []models.Season{}
 
-	cursor, err := SeasonCollection.Find(context.TODO(), nil)
+	cursor, err := SeasonCollection.Find(context.TODO(), bson.D{})
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
