@@ -52,6 +52,7 @@ func CreateUser(c *gin.Context) {
 		Id:        primitive.NewObjectID(),
 		Name:      userInput.Name,
 		Email:     userInput.Email,
+		Role:      "user",
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}
