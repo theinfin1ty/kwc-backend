@@ -19,7 +19,7 @@ func main() {
 
 	routes.Routes(app)
 
-	fmt.Printf("Server is running on port %s \n", "3000")
+	fmt.Printf("Server is running on port %s \n", configs.GetEnvVariable("PORT"))
 
-	app.Run(":" + "3000")
+	app.Run(":" + configs.GetEnvVariable("PORT"))
 }
