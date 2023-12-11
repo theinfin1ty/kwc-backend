@@ -1,6 +1,6 @@
 module kwc-backend
 
-go 1.19.13
+go 1.18.10
 
 require (
 	firebase.google.com/go v3.13.0+incompatible
