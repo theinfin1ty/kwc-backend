@@ -5,6 +5,7 @@ import (
 	"kwc-backend/configs"
 	"kwc-backend/routes"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,6 +14,8 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	app := gin.Default()
+
+	app.Use(cors.Default())
 
 	configs.ConnectDB()
 	configs.InitializeFirebase()
