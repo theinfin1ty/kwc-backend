@@ -1,10 +1,7 @@
 package controllers
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"kwc-backend/configs"
 	"kwc-backend/helpers"
 	"kwc-backend/models"
@@ -20,7 +17,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var userCollection *mongo.Collection = configs.GetCollection(configs.DB, "users")
+var UserCollection *mongo.Collection = configs.GetCollection(configs.DB, "users")
 
 func CreateUser(c *gin.Context) {
 	var userInput validations.UserInput
@@ -32,29 +29,18 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	err = userCollection.FindOne(context.TODO(), bson.M{"email": userInput.Email}).Decode(&user)
+	authUser, _ := c.Get("user")
 
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			fmt.Println("No documents found")
-		} else {
-			c.JSON(http.StatusBadRequest, helpers.InternalServerErrorResponse(err))
-			return
-		}
+	err = UserCollection.FindOne(context.TODO(), bson.M{"email": authUser.(models.User).Email}).Decode(&user)
+
+	if err != nil && err != mongo.ErrNoDocuments {
+		c.JSON(http.StatusBadRequest, helpers.InternalServerErrorResponse(err))
+		return
 	}
 
 	if user != (models.User{}) {
 		c.JSON(http.StatusBadRequest, helpers.BadRequestResponse("Email already exists"))
 		return
-	}
-
-	user = models.User{
-		Id:        primitive.NewObjectID(),
-		Name:      userInput.Name,
-		Email:     userInput.Email,
-		Role:      "user",
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
 	}
 
 	firebaseAdminAuth, err := configs.FirebaseAdmin.Auth(context.TODO())
@@ -64,18 +50,26 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	params := (&auth.UserToCreate{}).Email(userInput.Email).EmailVerified(true).Password(userInput.Password).DisplayName(userInput.Name).Disabled(false)
+	// params := (&auth.UserToCreate{}).Email(userInput.Email).EmailVerified(true).Password(userInput.Password).DisplayName(userInput.Name).Disabled(false)
 
-	firebaseUser, err := firebaseAdminAuth.CreateUser(context.TODO(), params)
+	firebaseUser, err := firebaseAdminAuth.GetUser(context.TODO(), authUser.(models.User).Uid)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
 		return
 	}
 
-	user.Uid = firebaseUser.UID
+	user = models.User{
+		Id:        primitive.NewObjectID(),
+		Name:      firebaseUser.DisplayName,
+		Email:     firebaseUser.Email,
+		Uid:       firebaseUser.UID,
+		Role:      "user",
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	}
 
-	_, err = userCollection.InsertOne(context.TODO(), user)
+	_, err = UserCollection.InsertOne(context.TODO(), user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
 		return
@@ -87,7 +81,7 @@ func CreateUser(c *gin.Context) {
 func ListUsers(c *gin.Context) {
 	var users []models.User
 
-	results, err := userCollection.Find(context.TODO(), bson.M{}, options.Find().SetProjection(bson.D{{"email", 0}}))
+	results, err := UserCollection.Find(context.TODO(), bson.M{}, options.Find().SetProjection(bson.D{{"email", 0}}))
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
@@ -110,7 +104,7 @@ func GetUser(c *gin.Context) {
 		return
 	}
 
-	err = userCollection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&user)
+	err = UserCollection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&user)
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -144,7 +138,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	err = userCollection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&user)
+	err = UserCollection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&user)
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -164,7 +158,7 @@ func UpdateUser(c *gin.Context) {
 		},
 	}
 
-	_, err = userCollection.UpdateOne(context.TODO(), bson.M{"_id": id}, update)
+	_, err = UserCollection.UpdateOne(context.TODO(), bson.M{"_id": id}, update)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
@@ -201,14 +195,14 @@ func DeleteUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, helpers.BadRequestResponse("Invalid ID"))
 	}
 
-	err = userCollection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&user)
+	err = UserCollection.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&user)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
 		return
 	}
 
-	_, err = userCollection.DeleteOne(context.TODO(), bson.M{"_id": id})
+	_, err = UserCollection.DeleteOne(context.TODO(), bson.M{"_id": id})
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
@@ -232,74 +226,74 @@ func DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, helpers.SuccessResponse(&gin.H{"user": user}))
 }
 
-func GetUserToken(c *gin.Context) {
-	var user models.User
-	var userInput validations.UserInput
+// func GetUserToken(c *gin.Context) {
+// 	var user models.User
+// 	var userInput validations.UserInput
 
-	err := c.BindJSON(&userInput)
+// 	err := c.BindJSON(&userInput)
 
-	if err != nil {
-		c.JSON(http.StatusBadRequest, helpers.BadRequestResponse("Validation Failed"))
-		return
-	}
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, helpers.BadRequestResponse("Validation Failed"))
+// 		return
+// 	}
 
-	err = userCollection.FindOne(context.TODO(), bson.M{"email": userInput.Email}).Decode(&user)
+// 	err = UserCollection.FindOne(context.TODO(), bson.M{"email": userInput.Email}).Decode(&user)
 
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			c.JSON(http.StatusNotFound, helpers.NotFoundResponse("User not found"))
-			return
-		}
+// 	if err != nil {
+// 		if err == mongo.ErrNoDocuments {
+// 			c.JSON(http.StatusNotFound, helpers.NotFoundResponse("User not found"))
+// 			return
+// 		}
 
-		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
-		return
-	}
+// 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
+// 		return
+// 	}
 
-	firebaseAdminAuth, err := configs.FirebaseAdmin.Auth(context.TODO())
+// 	firebaseAdminAuth, err := configs.FirebaseAdmin.Auth(context.TODO())
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
-		return
-	}
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
+// 		return
+// 	}
 
-	customToken, err := firebaseAdminAuth.CustomToken(context.TODO(), user.Uid)
+// 	customToken, err := firebaseAdminAuth.CustomToken(context.TODO(), user.Uid)
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
-		return
-	}
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
+// 		return
+// 	}
 
-	apiUrl := fmt.Sprintf("https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyCustomToken?key=%s", configs.GetEnvVariable("FIREBASE_API_KEY"))
+// 	apiUrl := fmt.Sprintf("https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyCustomToken?key=%s", configs.GetEnvVariable("FIREBASE_API_KEY"))
 
-	body := struct {
-		Token             string `json:"token"`
-		ReturnSecureToken bool   `json:"returnSecureToken"`
-	}{
-		Token:             customToken,
-		ReturnSecureToken: true,
-	}
+// 	body := struct {
+// 		Token             string `json:"token"`
+// 		ReturnSecureToken bool   `json:"returnSecureToken"`
+// 	}{
+// 		Token:             customToken,
+// 		ReturnSecureToken: true,
+// 	}
 
-	bodyJson, err := json.Marshal(body)
+// 	bodyJson, err := json.Marshal(body)
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
-		return
-	}
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
+// 		return
+// 	}
 
-	response, err := http.Post(apiUrl, "application/json", bytes.NewBuffer(bodyJson))
+// 	response, err := http.Post(apiUrl, "application/json", bytes.NewBuffer(bodyJson))
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
-		return
-	}
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, helpers.InternalServerErrorResponse(err))
+// 		return
+// 	}
 
-	type ResBody struct {
-		IdToken string `json:"idToken"`
-	}
+// 	type ResBody struct {
+// 		IdToken string `json:"idToken"`
+// 	}
 
-	var resBody ResBody
+// 	var resBody ResBody
 
-	err = json.NewDecoder(response.Body).Decode(&resBody)
-	c.JSON(http.StatusOK, helpers.SuccessResponse(&gin.H{"token": resBody}))
-	return
-}
+// 	err = json.NewDecoder(response.Body).Decode(&resBody)
+// 	c.JSON(http.StatusOK, helpers.SuccessResponse(&gin.H{"token": resBody}))
+// 	return
+// }
